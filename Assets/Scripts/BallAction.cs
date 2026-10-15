@@ -8,6 +8,7 @@ public class BallAction : MonoBehaviour
     [SerializeField] AudioClip SE_Bounce; //バウンド音
     [SerializeField] AudioClip SE_Catch; //キャッチ音
     [SerializeField] float BounceMinSpeed = 1.0f; //バウンド音を鳴らす最低速度
+    [SerializeField] float DragCoefficient = 0.0128f; //空気抵抗の係数（N/(m/s)²）
     Renderer myRenderer; //自身のレンダラー
     Rigidbody myRB; //自身の物理挙動
 
@@ -71,12 +72,24 @@ public class BallAction : MonoBehaviour
         {
             AudioSource.PlayClipAtPoint(SE_Catch, transform.position); //キャッチ音
         }
-        myRB.isKinematic = Mode; //掴んでいる間は手に追従させる
+        if (Mode)
+        {
+            //掴んでいる間は物理補間を切り、手の位置にそのまま追従させる（補間が残ると手とずれて震える）
+            myRB.interpolation = RigidbodyInterpolation.None;
+            myRB.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
+            myRB.isKinematic = true;
+        }
+        else
+        {
+            myRB.isKinematic = false;
+            myRB.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            myRB.interpolation = RigidbodyInterpolation.Interpolate; //飛んでいる間は滑らかに
+        }
         if (!Mode)
         {
             Destroy(gameObject, BallLife); //離したら一定時間後に撤去
         }
-        ChangeColor(Mode ? Color.red : Color.green);
+        ChangeColor(Color.white); //手が見えるので、掴んでも投げても本来の色のまま
     }
 
     //色変更処理（白は通常色として扱う） **********************************************
@@ -93,6 +106,13 @@ public class BallAction : MonoBehaviour
         myRB.linearVelocity = Velocity;
     }
 
+    //回転を与える処理（手首のスナップでバックスピン） **********************************************
+    void Spin(Vector3 AngularVelocity)
+    {
+        myRB.maxAngularVelocity = 50.0f; //既定値(7rad/s)だとスナップの回転が頭打ちになる
+        myRB.angularVelocity = AngularVelocity;
+    }
+
     //衝突処理（バウンド音） **********************************************
     void OnCollisionEnter(Collision collision)
     {
@@ -100,6 +120,14 @@ public class BallAction : MonoBehaviour
         if (SE_Bounce == null || Speed < BounceMinSpeed) return;
         float Volume = Mathf.Clamp01(Speed / 8.0f); //強く当たるほど大きな音
         AudioSource.PlayClipAtPoint(SE_Bounce, transform.position, Volume);
+    }
+
+    //空気抵抗（速さの2乗に比例）。バスケットボールの値：空気密度1.2kg/m³、抗力係数0.47、断面積π×0.12²
+    void FixedUpdate()
+    {
+        if (myRB.isKinematic) return;
+        Vector3 V = myRB.linearVelocity;
+        myRB.AddForce(-DragCoefficient * V.magnitude * V); //0.5×密度×抗力係数×断面積 = 約0.0128
     }
 
     // Update is called once per frame

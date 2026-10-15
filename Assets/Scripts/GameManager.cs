@@ -39,6 +39,9 @@ public class GameManager : MonoBehaviour
     [SerializeField] float PatCoinLife = 2.0f; //コインエフェクトの寿命
     [SerializeField] int PatAmount = 150; //コインエフェクトの量
     BallAction WaitingBall; //手に取られるのを待っているボール
+    [SerializeField] OVRHand PinchHand; //素手で開始・タイトル戻りに使う手（左手のピンチ）
+    bool isPinching; //今ピンチしているか
+    bool wasPinching; //前フレームでピンチしていたか
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -122,13 +125,18 @@ public class GameManager : MonoBehaviour
     void Update()
     {
         Elapsed += Time.deltaTime;
+        wasPinching = isPinching;
+        isPinching = PinchHand != null && PinchHand.IsTracked &&
+        PinchHand.GetFingerIsPinching(OVRHand.HandFinger.Index); //親指と人差し指をつまむ
+        bool PinchDown = isPinching && !wasPinching;
+        bool PinchUp = !isPinching && wasPinching;
         switch (GameMode)
         {
             case MODE.TITLE:
                 Elapsed %= BlinkInterval; //メッセージ点滅
-                txtMessage.text = (Elapsed < BlinkTime) ? "Push (B) to START" : "";
+                txtMessage.text = (Elapsed < BlinkTime) ? "Pinch (L) to START" : "";
                 if (Input.GetKeyDown(KeyCode.B) ||
-                OVRInput.GetDown(OVRInput.RawButton.B))
+                OVRInput.GetDown(OVRInput.RawButton.B) || PinchDown)
                 {
                     PlayStart(); //プレイ開始処理
                 }
@@ -157,9 +165,9 @@ public class GameManager : MonoBehaviour
                 break;
             case MODE.TIMEUP:
                 Elapsed %= BlinkInterval; //メッセージ点滅
-                txtMessage.text = (Elapsed < BlinkTime) ? "Push (A) 3 sec to TITLE" : "";
+                txtMessage.text = (Elapsed < BlinkTime) ? "Pinch (L) 3 sec to TITLE" : "";
                 if (Input.GetKey(KeyCode.A) ||
-                OVRInput.Get(OVRInput.RawButton.A))
+                OVRInput.Get(OVRInput.RawButton.A) || isPinching)
                 {
                     Waited += Time.deltaTime;
                     if (Waited > FillTime)
@@ -168,7 +176,7 @@ public class GameManager : MonoBehaviour
                     }
                 }
                 if (Input.GetKeyUp(KeyCode.A) ||
-                OVRInput.GetUp(OVRInput.RawButton.A))
+                OVRInput.GetUp(OVRInput.RawButton.A) || PinchUp)
                 {
                     Waited = 0.0f;
                 }
