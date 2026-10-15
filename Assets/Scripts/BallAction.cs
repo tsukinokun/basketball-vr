@@ -5,6 +5,9 @@ public class BallAction : MonoBehaviour
     [SerializeField] float DestroyLevel = -5.0f; //撤去される高さ
     [SerializeField] float BallLife = 8.0f; //投げてから撤去されるまでの時間
     [SerializeField] Color BaseColor = new Color(0.9f, 0.4f, 0.1f); //通常色
+    [SerializeField] AudioClip SE_Bounce; //バウンド音
+    [SerializeField] AudioClip SE_Catch; //キャッチ音
+    [SerializeField] float BounceMinSpeed = 1.0f; //バウンド音を鳴らす最低速度
     Renderer myRenderer; //自身のレンダラー
     Rigidbody myRB; //自身の物理挙動
 
@@ -64,6 +67,10 @@ public class BallAction : MonoBehaviour
         {
             IsWaiting = false; //手に取られた
         }
+        if (Mode && SE_Catch != null)
+        {
+            AudioSource.PlayClipAtPoint(SE_Catch, transform.position); //キャッチ音
+        }
         myRB.isKinematic = Mode; //掴んでいる間は手に追従させる
         if (!Mode)
         {
@@ -84,6 +91,15 @@ public class BallAction : MonoBehaviour
     {
         //手の速度をそのままボールに与える
         myRB.linearVelocity = Velocity;
+    }
+
+    //衝突処理（バウンド音） **********************************************
+    void OnCollisionEnter(Collision collision)
+    {
+        float Speed = collision.relativeVelocity.magnitude;
+        if (SE_Bounce == null || Speed < BounceMinSpeed) return;
+        float Volume = Mathf.Clamp01(Speed / 8.0f); //強く当たるほど大きな音
+        AudioSource.PlayClipAtPoint(SE_Bounce, transform.position, Volume);
     }
 
     // Update is called once per frame

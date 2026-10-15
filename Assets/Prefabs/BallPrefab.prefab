@@ -156,3 +156,6 @@ MonoBehaviour:
   DestroyLevel: -5
   BallLife: 8
   BaseColor: {r: 0.9, g: 0.4, b: 0.1, a: 1}
+  SE_Bounce: {fileID: 8300000, guid: 3ec17496c65785e46bf615e076aa9069, type: 3}
+  SE_Catch: {fileID: 8300000, guid: 25434290bb0c44743b15b68c8c4488eb, type: 3}
+  BounceMinSpeed: 1
