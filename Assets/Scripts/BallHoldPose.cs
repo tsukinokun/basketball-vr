@@ -68,6 +68,12 @@ public class BallHoldPose : MonoBehaviour
         }
     }
 
+    //指の曲がり具合（人差し指〜小指の、付け根から指先への向きと手の向きの角度の平均。0 で伸びきり、度）
+    //持っている間は指をボールに沿わせて上書きするので、上書きする前のトラッキングの値を LateUpdate で覚えておく
+    //手を開いたかの判定に使う
+    float TrackedCurl = 0.0f;
+    public float Curl { get { return IsReady ? TrackedCurl : 0.0f; } }
+
     //骨の名前（XRHand_ を除いた部分）から Bones の番号を引く（無ければ -1）
     //BoneId は手と体で同じ値が重複していて ToString() が別名になるので、名前ではなく値で照合する
     int IndexOf(string Name)
@@ -113,7 +119,22 @@ public class BallHoldPose : MonoBehaviour
 
     void LateUpdate()
     {
-        if (Ball == null || !IsReady) return;
+        if (!IsReady) return;
+        Vector3 HandDir = FingerDirection;
+        if (HandDir != Vector3.zero)
+        {
+            float Sum = 0.0f;
+            int Count = 0;
+            for (int f = 1; f < Fingers.Length; f++) //親指は除く
+            {
+                Transform Root = Bone(Fingers[f][0]), Tip = Bone(Fingers[f][Fingers[f].Length - 1]);
+                if (Root == null || Tip == null) continue;
+                Sum += Vector3.Angle(HandDir, Tip.position - Root.position);
+                Count++;
+            }
+            if (Count > 0) TrackedCurl = Sum / Count;
+        }
+        if (Ball == null) return;
         Transform Palm = Bone("Palm"), Wrist = Bone("Wrist");
         Transform MiddleProx = Bone("MiddleProximal"), IndexProx = Bone("IndexProximal"), LittleProx = Bone("LittleProximal");
         if (Palm == null || Wrist == null || MiddleProx == null || IndexProx == null || LittleProx == null) return;

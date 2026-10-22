@@ -30,7 +30,8 @@ public class GameManager : MonoBehaviour
     int Score; //獲得スコア
 
     [SerializeField] int GoalPoint = 2; //1ゴールの得点
-    [SerializeField] Vector3 SpawnPosVR = new Vector3(0.2f, 0.9f, 0.4f); //ボール出現位置（VR）
+    [SerializeField] Vector3 SpawnPosVR = new Vector3(0.2f, 0.9f, 0.4f); //ボール出現位置（VR）。高さは下の SpawnBelowEyeVR で目の高さから決める
+    [SerializeField] float SpawnBelowEyeVR = 0.25f; //ボールを目の高さからこれだけ下（胸の上あたり）に出す（VR, m）
     [SerializeField] Vector3 SpawnPosPC = new Vector3(0.0f, 1.0f, 1.265f); //ボール出現位置（PC）
     [SerializeField] float SpawnInterval = 0.5f; //ボールを取ってから次が出るまでの時間
     [FormerlySerializedAs("PigPrefab")]
@@ -42,12 +43,58 @@ public class GameManager : MonoBehaviour
     [SerializeField] OVRHand PinchHand; //素手で開始・タイトル戻りに使う手（左手のピンチ）
     bool isPinching; //今ピンチしているか
     bool wasPinching; //前フレームでピンチしていたか
+    [SerializeField] float SeatedEyeHeight = 1.3f; //目の高さがこれより低ければ座って遊んでいるとみなす（VR, m）
+    [SerializeField] float StandingEyeHeight = 1.6f; //座っている時に合わせる、立った時の目の高さ（VR, m）
+    OVRCameraRig Rig; //カメラリグ（VR）
+    bool HeightAdjusted = false; //高さ合わせが済んだか（false にすると次のフレームで測り直す）
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         myAudio = GetComponent<AudioSource>(); //自身の音源を取得
+        if (VRAction.isVR)
+        {
+            //VRは床を基準にトラッキングし、目の高さを実際の身長に合わせる（リング3.05mが本物と同じ高さに見える）
+            //カメラリグの高さ1.3mはPCで遊ぶ時の目の高さなので、VRでは床に置く
+            if (OVRManager.instance != null)
+            {
+                OVRManager.instance.trackingOriginType = OVRManager.TrackingOrigin.FloorLevel;
+            }
+            Rig = FindFirstObjectByType<OVRCameraRig>();
+            if (Rig != null)
+            {
+                Vector3 RigPos = Rig.transform.position;
+                Rig.transform.position = new Vector3(RigPos.x, 0.0f, RigPos.z);
+            }
+            if (OVRManager.display != null) OVRManager.display.RecenteredPose += OnRecentered;
+        }
         Ready(); //初期化処理
+    }
+
+    //座って遊んでいる時は、目の高さが立った時の高さになるようにカメラリグを持ち上げる（VR）
+    //立っている時は実際の身長のまま。測るのは起動時・プレイ開始時・リセンター（向き直し）時だけ
+    //（遊んでいる途中に測り直すと、前かがみなどで高さが上下してしまう）
+    void AdjustSeatedHeight()
+    {
+        if (HeightAdjusted || Rig == null || Rig.centerEyeAnchor == null || Time.time < 1.0f) return;
+        float Eye = Rig.centerEyeAnchor.position.y - Rig.transform.position.y; //床から目までの高さ
+        if (Eye < 0.5f) return; //まだトラッキングが始まっていない
+        bool Seated = Eye < SeatedEyeHeight;
+        Vector3 RigPos = Rig.transform.position;
+        Rig.transform.position = new Vector3(RigPos.x, Seated ? StandingEyeHeight - Eye : 0.0f, RigPos.z);
+        Debug.Log("[Height] eye=" + Eye.ToString("F2") + "m seated=" + Seated + " rig=" + Rig.transform.position.y.ToString("F2") + "m"); //実機での調整用
+        HeightAdjusted = true;
+    }
+
+    //リセンターされたら高さを測り直す
+    void OnRecentered()
+    {
+        HeightAdjusted = false;
+    }
+
+    void OnDestroy()
+    {
+        if (OVRManager.display != null) OVRManager.display.RecenteredPose -= OnRecentered;
     }
 
     //初期化処理 ***************************************************
@@ -73,6 +120,7 @@ public class GameManager : MonoBehaviour
     void Goal(Vector3 GoalPos)
     {
         if (GameMode != MODE.PLAYING) return; //プレイ中でなければ無効
+        Debug.Log("[Goal] score=" + (Score + GoalPoint)); //実機での調整用
         Score += GoalPoint;
         txtScore.text = "Score : " + Score.ToString("D3"); //スコア表示
         myAudio.PlayOneShot(SE_Goal); //ゴール音
@@ -89,6 +137,13 @@ public class GameManager : MonoBehaviour
     void SpawnBall()
     {
         Vector3 Pos = VRAction.isVR ? SpawnPosVR : SpawnPosPC;
+        Transform Eye = (Rig != null && Rig.centerEyeAnchor != null) ? Rig.centerEyeAnchor
+            : (Camera.main != null ? Camera.main.transform : null);
+        if (VRAction.isVR && Eye != null)
+        {
+            Pos.y = Eye.position.y - SpawnBelowEyeVR; //身長に関係なく手に取りやすい高さに
+            Debug.Log("[Spawn] eye=" + Eye.position.y.ToString("F2") + "m ball=" + Pos.y.ToString("F2") + "m"); //実機での調整用
+        }
         GameObject B = Instantiate(BallPrefab, Pos, Quaternion.identity);
         B.SendMessage("SetManager", gameObject,
         SendMessageOptions.DontRequireReceiver); //マネージャーを教える
@@ -117,6 +172,7 @@ public class GameManager : MonoBehaviour
         GameMode = MODE.PLAYING;
         Elapsed = 0.0f;
         Waited = 0.0f;
+        HeightAdjusted = false; //プレイ開始時の姿勢で高さを合わせ直す
         txtMessage.text = "";
         myAudio.Play(); //BGM再生
     }
@@ -124,6 +180,7 @@ public class GameManager : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        AdjustSeatedHeight();
         Elapsed += Time.deltaTime;
         wasPinching = isPinching;
         isPinching = PinchHand != null && PinchHand.IsTracked &&

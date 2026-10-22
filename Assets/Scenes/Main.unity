@@ -1018,17 +1018,17 @@ MonoBehaviour:
   HoldPose: {fileID: 1167330709}
   AutoRelease: 1
   AutoReleaseSpeed: 3
-  ReleaseDropRatio: 0.85
+  ReleaseDropRatio: 0.95
   Head: {fileID: 1123958618}
-  ShotHeight: -0.1
-  SnapAngularSpeed: 20
+  ShotHeight: -0.25
+  SnapAngularSpeed: 9
   FingerPadDistance: 0.07
-  MaxSpin: 20
+  MaxSpin: 19
   MaxHandSpeed: 12
   MaxHandAngular: 60
   RegrabDelay: 0.5
   HandSensorRadius: 0.04
-  VelocityFitWindow: 0.07
+  VelocityFitWindow: 0.05
 --- !u!135 &511685768
 SphereCollider:
   m_ObjectHideFlags: 0
