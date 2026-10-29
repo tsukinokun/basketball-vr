@@ -7,6 +7,13 @@ public class UISkew : BaseMeshEffect
 {
     [SerializeField] float Angle = 12.0f; //傾ける角度（度）。正で上側が右にずれる
 
+    //コードから作った時に角度を決める
+    public void SetAngle(float Value)
+    {
+        Angle = Value;
+        if (graphic != null) graphic.SetVerticesDirty();
+    }
+
     public override void ModifyMesh(VertexHelper vh)
     {
         if (!IsActive()) return;

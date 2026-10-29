@@ -8,6 +8,14 @@ public class UIGradient : BaseMeshEffect
     [SerializeField] Color Top = Color.white; //上端の色
     [SerializeField] Color Bottom = new Color(0.7f, 0.7f, 0.7f, 1.0f); //下端の色
 
+    //コードから作った時に色を決める
+    public void SetColors(Color _top, Color _bottom)
+    {
+        Top = _top;
+        Bottom = _bottom;
+        if (graphic != null) graphic.SetVerticesDirty();
+    }
+
     public override void ModifyMesh(VertexHelper vh)
     {
         if (!IsActive()) return;

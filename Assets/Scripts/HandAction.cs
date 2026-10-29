@@ -84,6 +84,22 @@ public class HandAction : MonoBehaviour
         return transform.position.y >= Eye.position.y + ShotHeight;
     }
 
+    //シュートの構えとみなす手の高さ（ワールド座標の y。チュートリアルの目印用）
+    public float ShotReadyY
+    {
+        get
+        {
+            Transform Eye = (Head != null) ? Head : (Camera.main != null ? Camera.main.transform : null);
+            return (Eye != null) ? Eye.position.y + ShotHeight : transform.position.y;
+        }
+    }
+    //素手でボールを持っているか（チュートリアル用）
+    public bool IsHolding { get { return isGrabed && isGrabedByHand; } }
+    //素手でボールを持ってシュートの構えができているか（チュートリアル用）
+    public bool IsReadyToShoot { get { return IsHolding && IsShotReady(); } }
+    //素手が見えているか（チュートリアル用。コントローラーの時は false）
+    public bool IsHandMode { get { return IsHandTracked(); } }
+
     //素手がトラッキングされているか
     bool IsHandTracked()
     {

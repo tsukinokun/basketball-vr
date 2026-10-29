@@ -10,6 +10,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] AudioClip SE_TimeUp;
     AudioSource myAudio; //自身の音源
     FxManager Fx; //派手な演出の担当
+    TutorialGuide Tutorial; //最初の1投の投げ方の案内
 
     enum MODE
     {
@@ -59,6 +60,7 @@ public class GameManager : MonoBehaviour
     {
         myAudio = GetComponent<AudioSource>(); //自身の音源を取得
         Fx = GetComponent<FxManager>(); //演出担当を取得
+        Tutorial = GetComponent<TutorialGuide>(); //チュートリアルを取得
         if (VRAction.isVR)
         {
             //VRは床を基準にトラッキングし、目の高さを実際の身長に合わせる（リング3.05mが本物と同じ高さに見える）
@@ -165,6 +167,7 @@ public class GameManager : MonoBehaviour
         SendMessageOptions.DontRequireReceiver); //マネージャーを教える
         WaitingBall = B.GetComponent<BallAction>();
         Fx.AttachTrail(B); //投げた時の軌跡（連続ゴール中は炎）
+        Tutorial.SetBall(WaitingBall); //チュートリアルに今のボールを教える
     }
 
     //タイムアップ処理 ***********************************************
@@ -183,6 +186,7 @@ public class GameManager : MonoBehaviour
         }
         WaitingBall = null;
         Fx.TimeUpFx(Score); //時間切れの演出
+        Tutorial.End(); //チュートリアルが途中でも消す
     }
     //プレイ開始処理 ***********************************************
     void PlayStart()
@@ -194,6 +198,7 @@ public class GameManager : MonoBehaviour
         txtMessage.text = "";
         myAudio.Play(); //BGM再生
         Fx.StartFx(); //開始の演出
+        Tutorial.Begin(); //最初の1投の案内を出す
     }
 
     //ピンチ判定 ***********************************************

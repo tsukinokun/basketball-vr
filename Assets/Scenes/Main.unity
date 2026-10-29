@@ -3251,6 +3251,7 @@ GameObject:
   - component: {fileID: 1635978235}
   - component: {fileID: 1635978234}
   - component: {fileID: 1635978237}
+  - component: {fileID: 1635978238}
   m_Layer: 0
   m_Name: Manager
   m_TagString: Untagged
@@ -3434,6 +3435,26 @@ MonoBehaviour:
   HurryTime: 10
   FireCombo: 3
   ConfettiAmount: 120
+--- !u!114 &1635978238
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1635978233}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b78bb39f593eab7408a69b7b30d3f680, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TutorialGuide
+  Hand: {fileID: 511685767}
+  Rim: {fileID: 887746855}
+  GlowMat: {fileID: 2100000, guid: a0cb35838e48716419a10618f503ce44, type: 2}
+  CardFont: {fileID: 12800000, guid: e656f699a22dd864e8220c5b1e368add, type: 3}
+  RingSprite: {fileID: 21300000, guid: c12b263a73a35054fa759c5a41fb8a4e, type: 3}
+  CardScale: 0.0008
+  ThrowSpeed: 1.5
+  PreviewInEditor: 0
 --- !u!1 &1671276905
 GameObject:
   m_ObjectHideFlags: 0

@@ -15,7 +15,7 @@ public class BallAction : MonoBehaviour
     GameObject Manager; //マネージャー
     public bool IsWaiting { get; private set; } = true; //手に取られるのを待っているか
     public bool IsScored { get; private set; } = false; //ゴール済みか
-    bool IsThrown = false; //手から離されたか
+    public bool IsThrown { get; private set; } = false; //手から離されたか
     bool HasGoaled = false; //実際にゴールしたか（無効判定は含まない）
     public float DragPerMass { get { return DragCoefficient / myRB.mass; } } //空気抵抗の係数÷質量（投げる速さの計算用）
 
