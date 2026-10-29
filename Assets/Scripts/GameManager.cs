@@ -9,6 +9,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] AudioClip SE_Thrown;
     [SerializeField] AudioClip SE_TimeUp;
     AudioSource myAudio; //自身の音源
+    FxManager Fx; //派手な演出の担当
 
     enum MODE
     {
@@ -52,6 +53,7 @@ public class GameManager : MonoBehaviour
     void Start()
     {
         myAudio = GetComponent<AudioSource>(); //自身の音源を取得
+        Fx = GetComponent<FxManager>(); //演出担当を取得
         if (VRAction.isVR)
         {
             //VRは床を基準にトラッキングし、目の高さを実際の身長に合わせる（リング3.05mが本物と同じ高さに見える）
@@ -104,8 +106,8 @@ public class GameManager : MonoBehaviour
         Score = 0;
         Elapsed = 0.0f;
         Waited = 0.0f;
-        txtScore.text = "Score : " + Score.ToString("D3");
-        txtTime.text = "Time : " + LimitTime.ToString("00.00") + "s";
+        txtScore.text = Score.ToString("D3"); //「SCORE」の見出しはボード側にある
+        txtTime.text = LimitTime.ToString("00.00");
         imgFill.fillAmount = 0.0f;
         myAudio.PlayOneShot(SE_Tada); //開始サウンド
     }
@@ -122,15 +124,24 @@ public class GameManager : MonoBehaviour
         if (GameMode != MODE.PLAYING) return; //プレイ中でなければ無効
         Debug.Log("[Goal] score=" + (Score + GoalPoint)); //実機での調整用
         Score += GoalPoint;
-        txtScore.text = "Score : " + Score.ToString("D3"); //スコア表示
+        txtScore.text = Score.ToString("D3"); //スコア表示（「SCORE」の見出しはボード側にある）
         myAudio.PlayOneShot(SE_Goal); //ゴール音
 
         //コインエフェクトを生成
-        GameObject Fx = Instantiate(PatCoin, GoalPos, Quaternion.identity);
+        GameObject CoinFx = Instantiate(PatCoin, GoalPos, Quaternion.identity);
         ParticleSystem.EmissionModule Emi =
-        Fx.GetComponent<ParticleSystem>().emission;
+        CoinFx.GetComponent<ParticleSystem>().emission;
         Emi.rateOverTime = PatAmount;
-        Destroy(Fx, PatCoinLife); //コインエフェクトの撤去予約
+        Destroy(CoinFx, PatCoinLife); //コインエフェクトの撤去予約
+
+        Fx.GoalFx(GoalPos, GoalPoint); //紙吹雪・光・ポップアップなどの派手な演出
+    }
+
+    //投げたボールが入らずに消えた報告 **********************************************
+    void Missed()
+    {
+        if (GameMode != MODE.PLAYING) return;
+        Fx.MissFx(); //連続ゴールが途切れる
     }
 
     //ボール生成処理 ***********************************************
@@ -148,6 +159,7 @@ public class GameManager : MonoBehaviour
         B.SendMessage("SetManager", gameObject,
         SendMessageOptions.DontRequireReceiver); //マネージャーを教える
         WaitingBall = B.GetComponent<BallAction>();
+        Fx.AttachTrail(B); //投げた時の軌跡（連続ゴール中は炎）
     }
 
     //タイムアップ処理 ***********************************************
@@ -156,7 +168,7 @@ public class GameManager : MonoBehaviour
         GameMode = MODE.TIMEUP;
         Elapsed = 0.0f;
         Waited = 0.0f;
-        txtTime.text = "Time : 00.00s";
+        txtTime.text = "00.00";
         myAudio.Stop(); //BGM停止
         myAudio.PlayOneShot(SE_TimeUp); //タイムアップ音
         GameObject[] Items = GameObject.FindGameObjectsWithTag("Item");
@@ -165,6 +177,7 @@ public class GameManager : MonoBehaviour
             Destroy(Stored); //残ったボールを全撤去
         }
         WaitingBall = null;
+        Fx.TimeUpFx(Score); //時間切れの演出
     }
     //プレイ開始処理 ***********************************************
     void PlayStart()
@@ -175,6 +188,7 @@ public class GameManager : MonoBehaviour
         HeightAdjusted = false; //プレイ開始時の姿勢で高さを合わせ直す
         txtMessage.text = "";
         myAudio.Play(); //BGM再生
+        Fx.StartFx(); //開始の演出
     }
 
     // Update is called once per frame
@@ -217,7 +231,8 @@ public class GameManager : MonoBehaviour
                 }
                 else
                 {
-                    txtTime.text = "Time : " + (LimitTime - Elapsed).ToString("00.00") + "s";
+                    txtTime.text = (LimitTime - Elapsed).ToString("00.00"); //「TIME」の見出しはボード側にある
+                    Fx.UpdateTime(LimitTime - Elapsed); //残りわずかなら赤く脈打つ
                 }
                 break;
             case MODE.TIMEUP:

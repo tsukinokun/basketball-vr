@@ -15,6 +15,8 @@ public class BallAction : MonoBehaviour
     GameObject Manager; //マネージャー
     public bool IsWaiting { get; private set; } = true; //手に取られるのを待っているか
     public bool IsScored { get; private set; } = false; //ゴール済みか
+    bool IsThrown = false; //手から離されたか
+    bool HasGoaled = false; //実際にゴールしたか（無効判定は含まない）
     public float DragPerMass { get { return DragCoefficient / myRB.mass; } } //空気抵抗の係数÷質量（投げる速さの計算用）
 
     void Awake()
@@ -55,6 +57,7 @@ public class BallAction : MonoBehaviour
     {
         if (IsScored) return; //1つのボールで得点するのは1回だけ
         IsScored = true;
+        HasGoaled = true;
         if (Manager != null)
         {
             Manager.SendMessage("Goal", transform.position,
@@ -88,9 +91,23 @@ public class BallAction : MonoBehaviour
         }
         if (!Mode)
         {
+            IsThrown = true;
             Destroy(gameObject, BallLife); //離したら一定時間後に撤去
         }
+        TrailRenderer Trail = GetComponent<TrailRenderer>();
+        if (Trail != null)
+        {
+            Trail.Clear(); //掴んでいた間の線は残さない
+            Trail.emitting = !Mode; //飛んでいる間だけ軌跡を出す
+        }
         ChangeColor(Color.white); //手が見えるので、掴んでも投げても本来の色のまま
+    }
+
+    //消える時に、投げたのに入らなかったならマネージャーに報告（連続ゴールが途切れる）
+    void OnDestroy()
+    {
+        if (!IsThrown || HasGoaled || Manager == null || !gameObject.scene.isLoaded) return;
+        Manager.SendMessage("Missed", SendMessageOptions.DontRequireReceiver);
     }
 
     //色変更処理（白は通常色として扱う） **********************************************
