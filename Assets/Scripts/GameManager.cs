@@ -42,6 +42,11 @@ public class GameManager : MonoBehaviour
     [SerializeField] int PatAmount = 150; //コインエフェクトの量
     BallAction WaitingBall; //手に取られるのを待っているボール
     [SerializeField] OVRHand PinchHand; //素手で開始・タイトル戻りに使う手（左手のピンチ）
+    [SerializeField] OVRHand PinchHandSub; //もう片方の手でもピンチできるように（右手）
+    [SerializeField] float PinchOn = 0.65f; //つまむ強さがこれ以上でピンチ開始（0〜1）
+    [SerializeField] float PinchOff = 0.35f; //ピンチ中はこれを下回るまで離したとみなさない（ちらつき防止）
+    [SerializeField] float PinchLostGrace = 0.3f; //手の追跡が一瞬切れても、この秒数まではピンチを続けているとみなす
+    float PinchLastTracked = -10.0f; //最後に手が追跡できていた時刻
     bool isPinching; //今ピンチしているか
     bool wasPinching; //前フレームでピンチしていたか
     [SerializeField] float SeatedEyeHeight = 1.3f; //目の高さがこれより低ければ座って遊んでいるとみなす（VR, m）
@@ -191,21 +196,40 @@ public class GameManager : MonoBehaviour
         Fx.StartFx(); //開始の演出
     }
 
+    //ピンチ判定 ***********************************************
+    //GetFingerIsPinching は指がほぼくっつかないと true にならず、追跡が一瞬切れても false になるので、
+    //つまむ強さで判定し、始まりと終わりのしきい値を分けてちらつかないようにする
+    bool CheckPinch()
+    {
+        float Strength = -1.0f; //追跡できている手の中で一番強くつまんでいる強さ（どちらも追跡できなければ -1）
+        foreach (OVRHand Hand in new OVRHand[] { PinchHand, PinchHandSub })
+        {
+            if (Hand == null || !Hand.IsTracked) continue;
+            Strength = Mathf.Max(Strength, Hand.GetFingerPinchStrength(OVRHand.HandFinger.Index));
+        }
+        if (Strength < 0.0f)
+        {
+            //追跡が切れた直後は今の状態を保つ（長押し中に一瞬切れてもやり直しにならない）
+            return isPinching && Time.time - PinchLastTracked < PinchLostGrace;
+        }
+        PinchLastTracked = Time.time;
+        return isPinching ? Strength > PinchOff : Strength >= PinchOn;
+    }
+
     // Update is called once per frame
     void Update()
     {
         AdjustSeatedHeight();
         Elapsed += Time.deltaTime;
         wasPinching = isPinching;
-        isPinching = PinchHand != null && PinchHand.IsTracked &&
-        PinchHand.GetFingerIsPinching(OVRHand.HandFinger.Index); //親指と人差し指をつまむ
+        isPinching = CheckPinch(); //親指と人差し指をつまむ
         bool PinchDown = isPinching && !wasPinching;
         bool PinchUp = !isPinching && wasPinching;
         switch (GameMode)
         {
             case MODE.TITLE:
                 Elapsed %= BlinkInterval; //メッセージ点滅
-                txtMessage.text = (Elapsed < BlinkTime) ? "Pinch (L) to START" : "";
+                txtMessage.text = (Elapsed < BlinkTime) ? "Pinch to START" : "";
                 if (Input.GetKeyDown(KeyCode.B) ||
                 OVRInput.GetDown(OVRInput.RawButton.B) || PinchDown)
                 {
@@ -237,7 +261,7 @@ public class GameManager : MonoBehaviour
                 break;
             case MODE.TIMEUP:
                 Elapsed %= BlinkInterval; //メッセージ点滅
-                txtMessage.text = (Elapsed < BlinkTime) ? "Pinch (L) 3 sec to TITLE" : "";
+                txtMessage.text = (Elapsed < BlinkTime) ? "Pinch 3 sec to TITLE" : "";
                 if (Input.GetKey(KeyCode.A) ||
                 OVRInput.Get(OVRInput.RawButton.A) || isPinching)
                 {
