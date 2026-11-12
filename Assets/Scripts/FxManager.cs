@@ -155,13 +155,14 @@ public class FxManager : MonoBehaviour
     {
         BonusPunch = 1.0f;
         Vector3 Pos = HoopCenter != null ? HoopCenter.position : transform.position;
-        Popup(Pos + Vector3.up * 1.6f, "+" + Mathf.RoundToInt(Seconds) + " SEC!", BonusColor, 1.8f);
-        Popup(Pos + Vector3.up * 2.1f, "TIME BONUS", Color.white, 1.0f);
+        //ゴールのポップアップ（コンボで大きくなる）と重ならないよう、その上に出す
+        Popup(Pos + Vector3.up * 2.3f, "+" + Mathf.RoundToInt(Seconds) + " SEC!", BonusColor, 1.6f);
+        Popup(Pos + Vector3.up * 2.85f, "TIME BONUS", Color.white, 1.0f);
         Gradient Cool = new Gradient();
         Cool.SetKeys(
             new GradientColorKey[] { new GradientColorKey(Color.white, 0.0f), new GradientColorKey(BonusColor, 0.5f), new GradientColorKey(new Color(0.2f, 0.4f, 1.0f), 1.0f) },
             new GradientAlphaKey[] { new GradientAlphaKey(1.0f, 0.0f), new GradientAlphaKey(1.0f, 1.0f) });
-        Burst(Pos + Vector3.up * 1.6f, 90, 3.0f, 0.1f, 1.4f, 0.2f, Cool, true);
+        Burst(Pos + Vector3.up * 2.3f, 90, 3.0f, 0.1f, 1.4f, 0.2f, Cool, true);
         if (ArenaFx.Instance != null) ArenaFx.Instance.TimeBonus(); //ホイッスルとLEDボード
     }
 
