@@ -135,6 +135,18 @@ public class BallAction : MonoBehaviour
     void OnCollisionEnter(Collision collision)
     {
         float Speed = collision.relativeVelocity.magnitude;
+        //リム・ボード・支柱は、それぞれの音を鳴らして揺れる
+        SurfaceSound Surface = collision.collider.GetComponentInParent<SurfaceSound>();
+        if (Surface != null)
+        {
+            Surface.Hit(collision.GetContact(0).point, Speed);
+            return;
+        }
+        //床などで強く弾んだら小さな輪を出す
+        if (ArenaFx.Instance != null && collision.contactCount > 0)
+        {
+            ArenaFx.Instance.Impact(collision.GetContact(0).point, Speed);
+        }
         if (SE_Bounce == null || Speed < BounceMinSpeed) return;
         float Volume = Mathf.Clamp01(Speed / 8.0f); //強く当たるほど大きな音
         AudioSource.PlayClipAtPoint(SE_Bounce, transform.position, Volume);

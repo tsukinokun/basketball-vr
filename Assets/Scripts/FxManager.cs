@@ -16,6 +16,7 @@ public class FxManager : MonoBehaviour
     [SerializeField] float HurryTime = 10.0f; //残りがこれ以下になったら時間表示を赤く脈打たせる
     [SerializeField] int FireCombo = 3; //この連続ゴール数からボールが燃える
     [SerializeField] int ConfettiAmount = 120; //紙吹雪の量（コンボで増える）
+    [SerializeField] Transform NetTransform; //ゴール時に揺らすネット（上端が原点）
 
     int Combo; //連続ゴール数（外したら0に戻る）
     Renderer[] FlashRenderers; //光らせるレンダラー
@@ -76,6 +77,7 @@ public class FxManager : MonoBehaviour
         Vector3 Pos = HoopCenter != null ? HoopCenter.position : transform.position;
         Popup(Pos + Vector3.up * 0.5f, "GO!!", new Color(0.3f, 1.0f, 0.5f), 1.6f);
         Burst(Pos, 80, 4.0f, 0.1f, 1.2f, 0.3f, Rainbow, true);
+        if (ArenaFx.Instance != null) ArenaFx.Instance.StartGame(); //ホイッスル
     }
 
     //ゴール **********************************************
@@ -91,6 +93,8 @@ public class FxManager : MonoBehaviour
 
         Flash();
         PunchScore(Power);
+        SwishNet(Power);
+        if (ArenaFx.Instance != null) ArenaFx.Instance.Goal(Power, OnFire); //歓声・観客・LEDボード
 
         //得点とコンボのポップアップ
         Popup(Pos + Vector3.up * 0.4f, "+" + Point, Color.white, 1.0f);
@@ -106,6 +110,7 @@ public class FxManager : MonoBehaviour
     public void MissFx()
     {
         Combo = 0;
+        if (ArenaFx.Instance != null) ArenaFx.Instance.Miss();
     }
 
     //時間切れ **********************************************
@@ -116,6 +121,7 @@ public class FxManager : MonoBehaviour
         Popup(Pos + Vector3.up * 1.1f, "TIME UP!", new Color(1.0f, 0.3f, 0.3f), 1.8f);
         Popup(Pos + Vector3.up * 0.3f, "SCORE " + Score, Color.white, 1.4f);
         Burst(Pos, 300, 5.0f, 0.1f, 3.0f, 0.4f, Rainbow, true);
+        if (ArenaFx.Instance != null) ArenaFx.Instance.TimeUp(); //拍手と大歓声
         if (TimeText != null)
         {
             TimeText.rectTransform.localScale = TimeBaseScale;
@@ -276,6 +282,36 @@ public class FxManager : MonoBehaviour
         {
             FlashRenderers[i].material.color = FlashBaseColors[i];
         }
+    }
+
+    //ネットが下に伸びて、ぶるんと揺れながら戻る **********************************************
+    Coroutine NetRoutine;
+    Vector3 NetBaseScale;
+
+    void SwishNet(float Power)
+    {
+        if (NetTransform == null) return;
+        if (NetRoutine != null) StopCoroutine(NetRoutine);
+        else NetBaseScale = NetTransform.localScale;
+        NetRoutine = StartCoroutine(SwishNetRun(Power));
+    }
+
+    IEnumerator SwishNetRun(float Power)
+    {
+        const float SwishTime = 0.9f;
+        float Amp = 0.28f + 0.06f * Power;
+        for (float t = 0.0f; t < SwishTime; t += Time.deltaTime)
+        {
+            //ボールが通った直後に一番伸び、減衰しながら上下に揺れる
+            float Wave = Mathf.Exp(-t * 6.0f) * Mathf.Sin(t * 16.0f + 0.6f);
+            NetTransform.localScale = new Vector3(
+                NetBaseScale.x * (1.0f - 0.25f * Amp * Wave),
+                NetBaseScale.y * (1.0f + Amp * Wave),
+                NetBaseScale.z * (1.0f - 0.25f * Amp * Wave));
+            yield return null;
+        }
+        NetTransform.localScale = NetBaseScale;
+        NetRoutine = null;
     }
 
     //スコア表示を弾ませる **********************************************

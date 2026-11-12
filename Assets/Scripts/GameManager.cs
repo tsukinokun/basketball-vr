@@ -134,12 +134,15 @@ public class GameManager : MonoBehaviour
         txtScore.text = Score.ToString("D3"); //スコア表示（「SCORE」の見出しはボード側にある）
         myAudio.PlayOneShot(SE_Goal); //ゴール音
 
-        //コインエフェクトを生成
-        GameObject CoinFx = Instantiate(PatCoin, GoalPos, Quaternion.identity);
-        ParticleSystem.EmissionModule Emi =
-        CoinFx.GetComponent<ParticleSystem>().emission;
-        Emi.rateOverTime = PatAmount;
-        Destroy(CoinFx, PatCoinLife); //コインエフェクトの撤去予約
+        //コインエフェクトを生成（未設定なら出さない）
+        if (PatCoin != null)
+        {
+            GameObject CoinFx = Instantiate(PatCoin, GoalPos, Quaternion.identity);
+            ParticleSystem.EmissionModule Emi =
+            CoinFx.GetComponent<ParticleSystem>().emission;
+            Emi.rateOverTime = PatAmount;
+            Destroy(CoinFx, PatCoinLife); //コインエフェクトの撤去予約
+        }
 
         Fx.GoalFx(GoalPos, GoalPoint); //紙吹雪・光・ポップアップなどの派手な演出
     }
