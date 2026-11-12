@@ -133,15 +133,36 @@ public class FxManager : MonoBehaviour
     public void UpdateTime(float Remain)
     {
         if (TimeText == null) return;
+        //時間延長の直後は水色に光って弾む（毎フレームここで大きさを決めるので、ここで重ねる）
+        BonusPunch = Mathf.Max(0.0f, BonusPunch - Time.deltaTime / 0.6f);
+        float Bonus = BonusPunch * BonusPunch;
         if (Remain > HurryTime)
         {
-            TimeText.rectTransform.localScale = TimeBaseScale;
-            TimeText.color = TimeBaseColor;
+            TimeText.rectTransform.localScale = TimeBaseScale * (1.0f + 0.5f * Bonus);
+            TimeText.color = Color.Lerp(TimeBaseColor, BonusColor, Bonus);
             return;
         }
         float Beat = Remain - Mathf.Floor(Remain); //秒が切り替わる瞬間に1、そこから0へ
         TimeText.rectTransform.localScale = TimeBaseScale * (1.0f + 0.3f * Beat * Beat);
         TimeText.color = Color.Lerp(TimeBaseColor, new Color(1.0f, 0.15f, 0.1f), 0.5f + 0.5f * Beat);
+    }
+
+    //時間延長 **********************************************
+    float BonusPunch; //時間表示が弾む強さ（1→0）
+    static readonly Color BonusColor = new Color(0.3f, 0.9f, 1.0f);
+
+    public void TimeBonusFx(float Seconds)
+    {
+        BonusPunch = 1.0f;
+        Vector3 Pos = HoopCenter != null ? HoopCenter.position : transform.position;
+        Popup(Pos + Vector3.up * 1.6f, "+" + Mathf.RoundToInt(Seconds) + " SEC!", BonusColor, 1.8f);
+        Popup(Pos + Vector3.up * 2.1f, "TIME BONUS", Color.white, 1.0f);
+        Gradient Cool = new Gradient();
+        Cool.SetKeys(
+            new GradientColorKey[] { new GradientColorKey(Color.white, 0.0f), new GradientColorKey(BonusColor, 0.5f), new GradientColorKey(new Color(0.2f, 0.4f, 1.0f), 1.0f) },
+            new GradientAlphaKey[] { new GradientAlphaKey(1.0f, 0.0f), new GradientAlphaKey(1.0f, 1.0f) });
+        Burst(Pos + Vector3.up * 1.6f, 90, 3.0f, 0.1f, 1.4f, 0.2f, Cool, true);
+        if (ArenaFx.Instance != null) ArenaFx.Instance.TimeBonus(); //ホイッスルとLEDボード
     }
 
     //ボールに軌跡を付ける（燃えている時は太く長い炎の軌跡と火の粉） **********************************************

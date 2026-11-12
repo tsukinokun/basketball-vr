@@ -24,6 +24,19 @@ public class GameManager : MonoBehaviour
     [SerializeField] Text txtScore;
     [SerializeField] Image imgFill;
     [SerializeField] float LimitTime = 60.0f; //制限時間
+
+    //スコアがこの点数に届いたら、制限時間を Seconds 秒延ばす（点数の小さい順に並べる）
+    [System.Serializable]
+    struct TimeBonus
+    {
+        public int Score;
+        public float Seconds;
+    }
+    [SerializeField] TimeBonus[] TimeBonuses = {
+        new TimeBonus { Score = 10, Seconds = 30.0f },
+        new TimeBonus { Score = 30, Seconds = 30.0f } };
+    float CurrentLimit; //延長を含めた今の制限時間
+    int NextBonus; //次に届くと延長される節目の番号
     [SerializeField] float BlinkTime = 0.8f; //点滅時間
     [SerializeField] float BlinkInterval = 1.0f; //点滅間隔
     [SerializeField] float FillTime = 3.0f; //長押し時間
@@ -113,6 +126,8 @@ public class GameManager : MonoBehaviour
         Score = 0;
         Elapsed = 0.0f;
         Waited = 0.0f;
+        CurrentLimit = LimitTime;
+        NextBonus = 0;
         txtScore.text = Score.ToString("D3"); //「SCORE」の見出しはボード側にある
         txtTime.text = LimitTime.ToString("00.00");
         imgFill.fillAmount = 0.0f;
@@ -133,6 +148,16 @@ public class GameManager : MonoBehaviour
         Score += GoalPoint;
         txtScore.text = Score.ToString("D3"); //スコア表示（「SCORE」の見出しはボード側にある）
         myAudio.PlayOneShot(SE_Goal); //ゴール音
+
+        //節目の点数に届いたら時間を延長（1回で2つの節目を越えても両方足す）
+        while (NextBonus < TimeBonuses.Length && Score >= TimeBonuses[NextBonus].Score)
+        {
+            float Add = TimeBonuses[NextBonus].Seconds;
+            CurrentLimit += Add;
+            NextBonus++;
+            Debug.Log("[TimeBonus] score=" + Score + " +" + Add + "s limit=" + CurrentLimit); //実機での調整用
+            Fx.TimeBonusFx(Add);
+        }
 
         //コインエフェクトを生成（未設定なら出さない）
         if (PatCoin != null)
@@ -197,6 +222,8 @@ public class GameManager : MonoBehaviour
         GameMode = MODE.PLAYING;
         Elapsed = 0.0f;
         Waited = 0.0f;
+        CurrentLimit = LimitTime;
+        NextBonus = 0;
         HeightAdjusted = false; //プレイ開始時の姿勢で高さを合わせ直す
         txtMessage.text = "";
         myAudio.Play(); //BGM再生
@@ -255,16 +282,17 @@ public class GameManager : MonoBehaviour
                         Waited = SpawnInterval;
                     }
                 }
-                imgFill.fillAmount = 1.0f - Elapsed / LimitTime; //残り時間
+                //残り時間（延長されたら満タンに戻る）
+                imgFill.fillAmount = Mathf.Clamp01((CurrentLimit - Elapsed) / LimitTime);
 
-                if (LimitTime < Elapsed)
+                if (CurrentLimit < Elapsed)
                 {
                     TimeUp(); //タイムアップ処理
                 }
                 else
                 {
-                    txtTime.text = (LimitTime - Elapsed).ToString("00.00"); //「TIME」の見出しはボード側にある
-                    Fx.UpdateTime(LimitTime - Elapsed); //残りわずかなら赤く脈打つ
+                    txtTime.text = (CurrentLimit - Elapsed).ToString("00.00"); //「TIME」の見出しはボード側にある
+                    Fx.UpdateTime(CurrentLimit - Elapsed); //残りわずかなら赤く脈打つ
                 }
                 break;
             case MODE.TIMEUP:

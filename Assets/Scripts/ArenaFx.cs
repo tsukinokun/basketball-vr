@@ -116,6 +116,27 @@ public class ArenaFx : MonoBehaviour
         StartCoroutine(FlashRun(Mathf.RoundToInt(25 * Power), 1.2f));
     }
 
+    //時間延長（ホイッスルとLEDボード） **********************************************
+    public void TimeBonus()
+    {
+        if (SE_Whistle != null) PlayVoice(SE_Whistle, 0.7f, 1.12f); //少し高めにしてゴールの歓声と聞き分ける
+        Hype = Mathf.Max(Hype, 0.7f);
+        FlashRate = 1.0f;
+    }
+
+    //ピッチを変えて鳴らす（Voice のピッチは歓声用にいじるので別の音源で鳴らす）
+    void PlayVoice(AudioClip Clip, float Vol, float Pitch)
+    {
+        AudioSource Src = gameObject.AddComponent<AudioSource>();
+        Src.playOnAwake = false;
+        Src.spatialBlend = 0.0f;
+        Src.clip = Clip;
+        Src.volume = Vol;
+        Src.pitch = Pitch;
+        Src.Play();
+        Destroy(Src, Clip.length / Pitch + 0.1f);
+    }
+
     //外した（燃えている状態が終わる） **********************************************
     public void Miss()
     {
